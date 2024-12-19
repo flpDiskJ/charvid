@@ -111,7 +111,6 @@ void convert()
 
     bool once = true;
     bool skip = false;
-    int avr, avr_count;
     int chunks_needed = 1;
     int keyframe_period = 0;
     while(1)
@@ -170,27 +169,26 @@ void convert()
                     video_mem_allocation();
                 }
 
-            } else {
-                keyframe_period--;
-
-                // find current chunk averages and store in curr_chunk_buff
-                avr = 0; avr_count = 0;
+                // fill prev_chunk_buff from keyframe
                 for (int chunk_y = 0; chunk_y < (img_h / chunk_size); chunk_y++)
                 {
                     for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
                     {
-                        for (int y = 0; y < chunk_size; y++)
-                        {
-                            for (int x = 0; x < chunk_size; x++)
-                            {
-                                pixel = img[(y+(chunk_y*chunk_size))*img_w+(x+(chunk_x*chunk_size))];
-                                avr += pixel;
-                                avr_count++;
-                            }
-                        }
-                        curr_chunk_buff[chunk_y][chunk_x] = avr / avr_count;
-                        avr_count = 0;
-                        avr = 0;
+                        pixel = img[((chunk_size/2)+(chunk_y*chunk_size))*img_w+((chunk_size/2)+(chunk_x*chunk_size))];
+                        prev_chunk_buff[chunk_y][chunk_x] = pixel;
+                    }
+                }
+
+            } else {
+                keyframe_period--;
+
+                // find current chunk averages and store in curr_chunk_buff
+                for (int chunk_y = 0; chunk_y < (img_h / chunk_size); chunk_y++)
+                {
+                    for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
+                    {
+                        pixel = img[((chunk_size/2)+(chunk_y*chunk_size))*img_w+((chunk_size/2)+(chunk_x*chunk_size))];
+                        curr_chunk_buff[chunk_y][chunk_x] = pixel;
                     }
                 }
 
@@ -225,6 +223,15 @@ void convert()
                     priority_chunks[chunk_count++][1] = flagged_chunk[1];
                 }
 
+                // copy curr_chunk_buff to prev_chunk_buff
+                for (int chunk_y = 0; chunk_y < (img_h / chunk_size); chunk_y++)
+                {
+                    for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
+                    {
+                        prev_chunk_buff[chunk_y][chunk_x] = curr_chunk_buff[chunk_y][chunk_x];
+                    }
+                }
+
                 // send selected chunks to memory and prev_chunk_buff
                 // chunk id, chunk_y, chunk_x, chunk_pixels...
                 for(int chunk = 0; chunk < chunks_needed; chunk++)
@@ -232,7 +239,6 @@ void convert()
                     video_data[video_data_pos++] = std_chunk_id;
                     video_data[video_data_pos++] = priority_chunks[chunk][0]; // y
                     video_data[video_data_pos++] = priority_chunks[chunk][1]; // x
-                    avr = 0; avr_count = 0;
                     for (int y = 0; y < chunk_size; y++)
                     {
                         for (int x = 0; x < chunk_size; x++)
@@ -240,11 +246,8 @@ void convert()
                             pixel = img[(y+(priority_chunks[chunk][0]*chunk_size))*img_w+(x+(priority_chunks[chunk][1]*chunk_size))];
                             pixel /= 16;
                             video_data[video_data_pos++] = pixel;
-                            avr += pixel;
-                            avr_count++;
                         }
                     }
-                    prev_chunk_buff[priority_chunks[chunk][0]][priority_chunks[chunk][1]] = avr / avr_count;
                 }
             }
 
