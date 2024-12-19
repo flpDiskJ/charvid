@@ -144,6 +144,7 @@ void convert()
                 specs.width = (uint16_t)img_w;
                 specs.height = (uint16_t)img_h;
                 chunks_per_second = (img_w * img_h) / chunk_size; // number of chunks in frame
+                chunks_per_second *= img_fps;
                 chunks_per_second = (double)chunks_per_second * ((double)quality*0.1); // chunks_per_second based off 1-10 quality
                 if (chunks_per_second < 1){chunks_per_second = 1;}
                 specs.chunks_per_second = (uint32_t)chunks_per_second;
@@ -247,6 +248,7 @@ void convert()
                             pixel /= 16;
                             video_data[video_data_pos++] = pixel;
                         }
+                        video_mem_allocation();
                     }
                 }
             }
