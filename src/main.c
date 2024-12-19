@@ -10,8 +10,7 @@
 #include "stb_image.h"
 
 #define INPUT_MAX 500
-const long int MAX_CHUNK_WIDTH = 50;
-const int chunk_size = 30;
+const int chunk_size = 12;
 
 const unsigned char std_chunk_id = 10; // ID for standard 10x10 chunk
 const unsigned char key_chunk_id = 255; // ID for keyframe chunk
@@ -98,17 +97,17 @@ void convert()
     printf(" Original Framerate (24> fps recommended): ");
     scanf("%d", &img_fps);
 
-    int prev_chunk_buff[MAX_CHUNK_WIDTH][MAX_CHUNK_WIDTH]; // chunk averages stored here for comparison
-    int curr_chunk_buff[MAX_CHUNK_WIDTH][MAX_CHUNK_WIDTH];
-    for(int y = 0; y < MAX_CHUNK_WIDTH; y++) // zero out buff
+    int prev_chunk_buff[1000][1000]; // chunk averages stored here for comparison
+    int curr_chunk_buff[1000][1000];
+    for(int y = 0; y < 1000; y++) // zero out buff
     {
-        for(int x = 0; x < MAX_CHUNK_WIDTH; x++)
+        for(int x = 0; x < 1000; x++)
         {
             prev_chunk_buff[y][x] = 0;
             curr_chunk_buff[y][x] = 0;
         }
     }
-    int priority_chunks[MAX_CHUNK_WIDTH][2];
+    int priority_chunks[2000][2];
 
     bool once = true;
     bool skip = false;
