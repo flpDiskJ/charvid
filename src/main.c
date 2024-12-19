@@ -10,7 +10,7 @@
 #include "stb_image.h"
 
 #define INPUT_MAX 500
-const int chunk_size = 12;
+const int chunk_size = 10;
 
 const unsigned char std_chunk_id = 10; // ID for standard 10x10 chunk
 const unsigned char key_chunk_id = 255; // ID for keyframe chunk
@@ -107,7 +107,7 @@ void convert()
             curr_chunk_buff[y][x] = 0;
         }
     }
-    int priority_chunks[10000][2];
+    int priority_chunks[20000][2];
 
     bool once = true;
     bool skip = false;
@@ -146,17 +146,16 @@ void convert()
                 chunks_per_second = (img_w * img_h) / chunk_size; // number of chunks in frame
                 chunks_per_second *= img_fps;
                 chunks_per_second = (double)chunks_per_second * ((double)quality*0.1); // chunks_per_second based off 1-10 quality
-                if (chunks_per_second < 1){chunks_per_second = 1;}
                 specs.chunks_per_second = (uint32_t)chunks_per_second;
                 chunks_needed = chunks_per_second / img_fps; // chunks needed per frame
-                if (chunks_needed < 1){chunks_needed = 1;}
+                if(chunks_needed < 1){chunks_needed = 1;}
                 specs.fps = img_fps;
                 once = false;
             }
 
             if (keyframe_period == 0)
             {
-                keyframe_period = img_fps / 2;
+                keyframe_period = ((10-quality)+1) * 4;
                 video_data[video_data_pos++] = key_chunk_id;
 
                 for(int y = 0; y < img_h; y++)
@@ -269,22 +268,22 @@ void print_pixel(unsigned char pixel)
 {
     switch (pixel)
     {
-        case 0: printf("#"); break;
-        case 1: printf("#"); break;
-        case 2: printf("X"); break;
-        case 3: printf("0"); break;
-        case 4: printf("O"); break;
-        case 5: printf("C"); break;
-        case 6: printf("{"); break;
-        case 7: printf("]"); break;
-        case 8: printf("|"); break;
-        case 9: printf(";"); break;
-        case 10: printf(":"); break;
-        case 11: printf("~"); break;
-        case 12: printf("-"); break;
-        case 13: printf("."); break;
-        case 14: printf(" "); break;
-        case 15: printf(" "); break;
+        case 15: printf("#"); break;
+        case 14: printf("@"); break;
+        case 13: printf("X"); break;
+        case 12: printf("0"); break;
+        case 11: printf("O"); break;
+        case 10: printf("C"); break;
+        case 9: printf("{"); break;
+        case 8: printf("]"); break;
+        case 7: printf("|"); break;
+        case 6: printf(";"); break;
+        case 5: printf(":"); break;
+        case 4: printf("*"); break;
+        case 3: printf("~"); break;
+        case 2: printf("-"); break;
+        case 1: printf("."); break;
+        case 0: printf(" "); break;
         default:
             printf(" ");
             break;
