@@ -156,7 +156,7 @@ void convert()
 
             if (keyframe_period == 0)
             {
-                keyframe_period = 50;
+                keyframe_period = img_fps;
                 video_data[video_data_pos++] = key_chunk_id;
 
                 for(int y = 0; y < img_h; y++)
