@@ -1,10 +1,27 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include <SDL.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #define INPUT_MAX 500
+
+struct File_Header{
+    uint16_t width;
+    uint16_t height;
+    uint8_t audio_khz;
+    uint8_t chunk_size;
+    uint8_t chunks_per_second;
+};
+
+int width = 0;
+int height = 0;
+unsigned char *video_data;
+unsigned char *audio_data;
 
 bool strComp(char *input, char *comp) // compares strings
 {
@@ -22,7 +39,30 @@ bool strComp(char *input, char *comp) // compares strings
 void help()
 {
     printf(" exit\n");
-    printf("");
+    printf(" convert (convert png image sequence and wav audio to character video)\n");
+    printf(" play (play video currently in RAM)\n");
+    printf(" load (arg: filename  load existing charvid file)\n");
+    printf(" save (arg: filename  save charvid video currently in RAM)\n");
+}
+
+void convert()
+{
+    char filename[INPUT_MAX];
+    unsigned long int count = 0;
+    unsigned char *img;
+    int img_w, img_h, channels;
+    while(true)
+    {
+        memset(filename, 0, strlen(filename));
+        sprintf(filename, "%04d.png", count);
+        img = stbi_load(filename, &img_w, &img_h, &channels, 1);
+        if (img == NULL)
+        {
+            printf("Couldn't load image %s!", filename);
+            break;
+        }
+        free(img);
+    }
 }
 
 int main()
@@ -40,29 +80,40 @@ int main()
     char *token;
     while (run)
     {
-        printf("command: ");
-        fgets(input, INPUT_MAX, stdin);
-        command[0] = '\0';
-        arg[0] = '\0';
-        token = strtok(input, " \n\t\r");
-        strcpy(command, token);
-        token = strtok(NULL, " \n\t\r");
-        if (token != NULL)
+        while(1)
         {
-            strcpy(arg, token);
-        }
+            printf("command: ");
+            fgets(input, INPUT_MAX, stdin);
+            if (input[0] == '\r' || input[0] == '\n')
+            {
+                break;
+            }
+            command[0] = '\0';
+            arg[0] = '\0';
+            token = strtok(input, " \n\t\r");
+            strcpy(command, token);
+            token = strtok(NULL, " \n\t\r");
+            if (token != NULL)
+            {
+                strcpy(arg, token);
+            }
 
-        if (strComp(command, "exit\0"))
-        {
-            run = false;
-        } else if (strComp(command, "help\0"))
-        {
-            help();
-        }
+            if (strComp(command, "exit\0"))
+            {
+                run = false;
+            } else if (strComp(command, "help\0"))
+            {
+                help();
+            } else if (strComp(command, "convert\0"))
+            {
+                convert();
+            }
 
-        if (token != NULL)
-        {
-            free(token);
+            if (token != NULL)
+            {
+                free(token);
+            }
+            break;
         }
     }
 
