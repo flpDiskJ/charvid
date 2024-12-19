@@ -199,7 +199,7 @@ void convert()
                 int chunk_count = 0;
                 while (chunk_count < chunks_needed)
                 {
-                    diff = 0;
+                    peak_diff = 0;
                     for (int chunk_y = 0; chunk_y < (img_h / chunk_size); chunk_y++)
                     {
                         for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
