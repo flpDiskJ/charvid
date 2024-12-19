@@ -107,7 +107,7 @@ void convert()
             curr_chunk_buff[y][x] = 0;
         }
     }
-    int priority_chunks[2000][2];
+    int priority_chunks[10000][2];
 
     bool once = true;
     bool skip = false;
@@ -155,7 +155,7 @@ void convert()
 
             if (keyframe_period == 0)
             {
-                keyframe_period = img_fps;
+                keyframe_period = img_fps / 2;
                 video_data[video_data_pos++] = key_chunk_id;
 
                 for(int y = 0; y < img_h; y++)
