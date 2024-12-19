@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(charvid)
 
-find_package(SDL2 REQUIRED)
-
 set(SRC ${CMAKE_SOURCE_DIR}/src)
 
 
@@ -12,11 +10,9 @@ add_executable(charvid
 target_include_directories(
 	charvid PUBLIC
 	${SRC}/include
-	${SDL2_INCLUDE_DIRS}
 )
 target_link_libraries(
 	charvid PUBLIC
-	${SDL2_LIBRARIES}
 	m
 )
 
