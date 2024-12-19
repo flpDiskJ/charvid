@@ -10,18 +10,18 @@
 #include "stb_image.h"
 
 #define INPUT_MAX 500
-#define MAX_CHUNK_WIDTH 50
+const long int MAX_CHUNK_WIDTH = 50;
+const int chunk_size = 30;
 
 const unsigned char std_chunk_id = 10; // ID for standard 10x10 chunk
 const unsigned char key_chunk_id = 255; // ID for keyframe chunk
 const unsigned char stop_id = 244; // ID to stop video. end of datastream.
 
-const int refresh_rate = 15; // for playback
-
 typedef struct File_Header{
     uint16_t width;
     uint16_t height;
-    uint16_t chunks_per_second; // chunk is 10x10 pixels
+    uint8_t fps;
+    uint32_t chunks_per_second; // chunk is 10x10 pixels
 }File_Header;
 
 int width = 0;
@@ -62,10 +62,12 @@ void video_mem_allocation()
         video_data_size = 10000;
         video_data_pos = 0;
         video_data = malloc(video_data_size);
+        memset(video_data, 0, video_data_size);
     } else if (video_data_pos > video_data_size - 5000)
     {
         video_data_size += 10000;
         video_data = (unsigned char*)realloc(video_data, video_data_size);
+        memset(&video_data[video_data_pos], 0, video_data_size-video_data_pos);
     }
 }
 
@@ -93,7 +95,7 @@ void convert()
     else if (quality < 1){quality = 1;}
 
     // UI source frame rate (fps)
-    printf(" Original Framerate (fps): ");
+    printf(" Original Framerate (24> fps recommended): ");
     scanf("%d", &img_fps);
 
     int prev_chunk_buff[MAX_CHUNK_WIDTH][MAX_CHUNK_WIDTH]; // chunk averages stored here for comparison
@@ -143,18 +145,19 @@ void convert()
                 printf(" Image size = %d x %d (100x56 or smaller recommended)\n", img_w, img_h);
                 specs.width = (uint16_t)img_w;
                 specs.height = (uint16_t)img_h;
-                chunks_per_second = (img_w * img_h) / 10; // number of chunks in entire frame
-                chunks_per_second = (double)chunks_per_second * ((double)quality * 0.1); // chunks_per_second based off 1-10 quality
+                chunks_per_second = (img_w * img_h) / chunk_size; // number of chunks in frame
+                chunks_per_second = (double)chunks_per_second * ((double)quality*0.1); // chunks_per_second based off 1-10 quality
                 if (chunks_per_second < 1){chunks_per_second = 1;}
-                specs.chunks_per_second = (uint16_t)chunks_per_second;
+                specs.chunks_per_second = (uint32_t)chunks_per_second;
                 chunks_needed = chunks_per_second / img_fps; // chunks needed per frame
                 if (chunks_needed < 1){chunks_needed = 1;}
+                specs.fps = img_fps;
                 once = false;
             }
 
             if (keyframe_period == 0)
             {
-                keyframe_period = 100;
+                keyframe_period = 50;
                 video_data[video_data_pos++] = key_chunk_id;
 
                 for(int y = 0; y < img_h; y++)
@@ -173,15 +176,15 @@ void convert()
 
                 // find current chunk averages and store in curr_chunk_buff
                 avr = 0; avr_count = 0;
-                for (int chunk_y = 0; chunk_y < (img_h / 10); chunk_y++)
+                for (int chunk_y = 0; chunk_y < (img_h / chunk_size); chunk_y++)
                 {
-                    for (int chunk_x = 0; chunk_x < (img_w / 10); chunk_x++)
+                    for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
                     {
-                        for (int y = 0; y < 10; y++)
+                        for (int y = 0; y < chunk_size; y++)
                         {
-                            for (int x = 0; x < 10; x++)
+                            for (int x = 0; x < chunk_size; x++)
                             {
-                                pixel = img[(y+(chunk_y*10))*img_w+(x+(chunk_x*10))];
+                                pixel = img[(y+(chunk_y*chunk_size))*img_w+(x+(chunk_x*chunk_size))];
                                 avr += pixel;
                                 avr_count++;
                             }
@@ -200,9 +203,9 @@ void convert()
                 while (chunk_count < chunks_needed)
                 {
                     diff = 0;
-                    for (int chunk_y = 0; chunk_y < (img_h / 10); chunk_y++)
+                    for (int chunk_y = 0; chunk_y < (img_h / chunk_size); chunk_y++)
                     {
-                        for (int chunk_x = 0; chunk_x < (img_w / 10); chunk_x++)
+                        for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
                         {
                             diff = curr_chunk_buff[chunk_y][chunk_x] - prev_chunk_buff[chunk_y][chunk_x];
                             if (diff < 0)
@@ -231,11 +234,11 @@ void convert()
                     video_data[video_data_pos++] = priority_chunks[chunk][0]; // y
                     video_data[video_data_pos++] = priority_chunks[chunk][1]; // x
                     avr = 0; avr_count = 0;
-                    for (int y = 0; y < 10; y++)
+                    for (int y = 0; y < chunk_size; y++)
                     {
-                        for (int x = 0; x < 10; x++)
+                        for (int x = 0; x < chunk_size; x++)
                         {
-                            pixel = img[(y+(priority_chunks[chunk][0]*10))*img_w+(x+(priority_chunks[chunk][1]*10))];
+                            pixel = img[(y+(priority_chunks[chunk][0]*chunk_size))*img_w+(x+(priority_chunks[chunk][1]*chunk_size))];
                             pixel /= 16;
                             video_data[video_data_pos++] = pixel;
                             avr += pixel;
@@ -290,7 +293,7 @@ void delay(int delay_ms)
     clock_t start_time = clock();
 
     // looping till required time is not achieved
-    while (clock() < start_time + delay_ms);
+    while (clock() < start_time + (delay_ms*1000));
 }
 
 void play()
@@ -306,7 +309,7 @@ void play()
     video_data_pos = 0;
 
     int chunk_count = 0;
-    int delay_trigger = specs.chunks_per_second / refresh_rate;
+    int delay_trigger = specs.chunks_per_second / specs.fps;
 
     while (video_data_pos < video_data_size)
     {
@@ -315,18 +318,15 @@ void play()
             break;
         } else if (video_data[video_data_pos] == key_chunk_id)
         {
-            chunk_count++;
+            chunk_count = delay_trigger;
             video_data_pos++;
-            system("clear");
             for(int y = 0; y < specs.height; y++)
             {
                 for(int x = 0; x < specs.width; x++)
                 {
                     pixel = video_data[video_data_pos++];
-                    print_pixel(pixel);
                     frame_buff[y][x] = pixel;
                 }
-                printf("\n");
             }
         } else if (video_data[video_data_pos] == std_chunk_id)
         {
@@ -334,14 +334,13 @@ void play()
             video_data_pos++;
             int chunk_y = video_data[video_data_pos++];
             int chunk_x = video_data[video_data_pos++];
-            for(int y = 0; y < 10; y++)
+            for(int y = 0; y < chunk_size; y++)
             {
-                for(int x = 0; x <10; x++)
+                for(int x = 0; x <chunk_size; x++)
                 {
                     pixel = video_data[video_data_pos++];
-                    frame_buff[y+(chunk_y*10)][x+(chunk_x*10)] = pixel;
+                    frame_buff[y+(chunk_y*chunk_size)][x+(chunk_x*chunk_size)] = pixel;
                 }
-                printf("\n");
             }
 
         } else {
@@ -360,7 +359,7 @@ void play()
                 }
                 printf("\n");
             }
-            delay(8000);
+            delay(1000 / specs.fps);
         }
     }
 }
