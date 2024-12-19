@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <time.h>
 #include <math.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -12,6 +14,9 @@
 
 const unsigned char std_chunk_id = 10; // ID for standard 10x10 chunk
 const unsigned char key_chunk_id = 255; // ID for keyframe chunk
+const unsigned char stop_id = 244; // ID to stop video. end of datastream.
+
+const int refresh_rate = 15; // for playback
 
 typedef struct File_Header{
     uint16_t width;
@@ -22,7 +27,7 @@ typedef struct File_Header{
 int width = 0;
 int height = 0;
 unsigned char *video_data;
-unsigned long int video_data_size;
+unsigned long int video_data_size = 0;
 unsigned long int video_data_pos;
 File_Header specs;
 
@@ -71,6 +76,7 @@ void convert()
     {
         free(video_data);
         video_data = NULL;
+        video_data_size = 0;
     }
 
     video_mem_allocation();
@@ -121,6 +127,10 @@ void convert()
             if (prmt != 'y')
             {
                 printf(" Stopped.\n");
+                video_data[video_data_pos++] = stop_id;
+                video_data[video_data_pos++] = stop_id;
+                video_data[video_data_pos++] = stop_id;
+                video_data[video_data_pos++] = stop_id;
                 break;
             }
             skip = true;
@@ -130,7 +140,7 @@ void convert()
         {
             if (once) // do the following only once
             {
-                printf(" Image size = %d x %d (120x120 or smaller recommended)\n", img_w, img_h);
+                printf(" Image size = %d x %d (100x56 or smaller recommended)\n", img_w, img_h);
                 specs.width = (uint16_t)img_w;
                 specs.height = (uint16_t)img_h;
                 chunks_per_second = (img_w * img_h) / 10; // number of chunks in entire frame
@@ -248,6 +258,113 @@ void convert()
     }
 }
 
+void print_pixel(unsigned char pixel)
+{
+    switch (pixel)
+    {
+        case 0: printf("#"); break;
+        case 1: printf("#"); break;
+        case 2: printf("X"); break;
+        case 3: printf("0"); break;
+        case 4: printf("O"); break;
+        case 5: printf("C"); break;
+        case 6: printf("{"); break;
+        case 7: printf("]"); break;
+        case 8: printf("|"); break;
+        case 9: printf(";"); break;
+        case 10: printf(":"); break;
+        case 11: printf("~"); break;
+        case 12: printf("-"); break;
+        case 13: printf("."); break;
+        case 14: printf(" "); break;
+        case 15: printf(" "); break;
+        default:
+            printf(" ");
+            break;
+    }
+}
+
+void delay(int delay_ms)
+{
+    // Storing start time
+    clock_t start_time = clock();
+
+    // looping till required time is not achieved
+    while (clock() < start_time + delay_ms);
+}
+
+void play()
+{
+    unsigned char pixel;
+    unsigned char frame_buff[1000][1000];
+    system("clear");
+    if (video_data == NULL || video_data_size == 0)
+    {
+        printf(" Nothing in RAM..\n");
+        return;
+    }
+    video_data_pos = 0;
+
+    int chunk_count = 0;
+    int delay_trigger = specs.chunks_per_second / refresh_rate;
+
+    while (video_data_pos < video_data_size)
+    {
+        if (video_data[video_data_pos] == stop_id)
+        {
+            break;
+        } else if (video_data[video_data_pos] == key_chunk_id)
+        {
+            chunk_count++;
+            video_data_pos++;
+            system("clear");
+            for(int y = 0; y < specs.height; y++)
+            {
+                for(int x = 0; x < specs.width; x++)
+                {
+                    pixel = video_data[video_data_pos++];
+                    print_pixel(pixel);
+                    frame_buff[y][x] = pixel;
+                }
+                printf("\n");
+            }
+        } else if (video_data[video_data_pos] == std_chunk_id)
+        {
+            chunk_count++;
+            video_data_pos++;
+            int chunk_y = video_data[video_data_pos++];
+            int chunk_x = video_data[video_data_pos++];
+            for(int y = 0; y < 10; y++)
+            {
+                for(int x = 0; x <10; x++)
+                {
+                    pixel = video_data[video_data_pos++];
+                    frame_buff[y+(chunk_y*10)][x+(chunk_x*10)] = pixel;
+                }
+                printf("\n");
+            }
+
+        } else {
+            video_data_pos++;
+        }
+        if (chunk_count >= delay_trigger)
+        {
+            chunk_count = 0;
+            system("clear");
+            for(int y = 0; y < specs.height; y++)
+            {
+                for(int x = 0; x < specs.width; x++)
+                {
+                    pixel = frame_buff[y][x];
+                    print_pixel(pixel);
+                }
+                printf("\n");
+            }
+            delay(8000);
+        }
+    }
+}
+
 int main()
 {
     bool run = true;
@@ -284,6 +401,9 @@ int main()
             } else if (strComp(command, "convert\0"))
             {
                 convert();
+            } else if (strComp(command, "play\0"))
+            {
+                play();
             }
 
             if (token != NULL)
