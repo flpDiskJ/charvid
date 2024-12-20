@@ -21,6 +21,7 @@ typedef struct File_Header{
     uint16_t height;
     uint8_t fps;
     uint32_t chunks_per_second; // chunk is 10x10 pixels
+    uint32_t stream_len; // length of datastream
 }File_Header;
 
 int width = 0;
@@ -383,6 +384,69 @@ void play()
     }
 }
 
+void save_file()
+{
+    char filename[INPUT_MAX];
+    printf("  Filename (.chv): ");
+    scanf("%s", &filename);
+    video_data_pos = 0;
+    if (video_data_size == 0)
+    {
+        printf(" Nothing in RAM.\n");
+        return;
+    }
+    specs.stream_len = (uint32_t)video_data_size;
+    FILE *fp = fopen(filename, "wb");
+    fwrite(&specs, sizeof(File_Header), 1, fp);
+    unsigned char d_byte;
+    while (video_data_pos < video_data_size)
+    {
+        d_byte = ((video_data[video_data_pos+1] & 0xF) << 4) | (video_data[video_data_pos] & 0xF);
+        fwrite(&d_byte, 1, 1, fp);
+        video_data_pos += 2;
+        if (video_data[video_data_pos] == stop_id)
+        {
+            break;
+        }
+    }
+    fclose(fp);
+}
+
+void load_file()
+{
+    char filename[INPUT_MAX];
+    printf("  Filename (.chv): ");
+    scanf("%s", &filename);
+    video_data_pos = 0;
+    if (video_data_size != 0)
+    {
+        free(video_data);
+    }
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL)
+    {
+        printf(" Couldn't open file!\n");
+        return;
+    }
+    fread(&specs, sizeof(File_Header), 1, fp);
+    video_data_size = (int)specs.stream_len;
+    video_data = malloc(video_data_size+1000);
+    unsigned char d_byte;
+    while (video_data_pos < specs.stream_len)
+    {
+        fread(&d_byte, 1, 1, fp);
+        video_data[video_data_pos] = d_byte & 0xF;
+        video_data[video_data_pos+1] = d_byte >> 4 & 0xF;
+        video_data_pos += 2;
+        if (video_data[video_data_pos] == stop_id)
+        {
+            break;
+        }
+    }
+    video_data[video_data_pos] = stop_id;
+    fclose(fp);
+}
+
 int main()
 {
     bool run = true;
@@ -395,7 +459,7 @@ int main()
         while(1)
         {
             printf("command: ");
-            fgets(input, INPUT_MAX, stdin);
+            scanf("%s", &input);
             if (input[0] == '\r' || input[0] == '\n')
             {
                 break;
@@ -422,6 +486,12 @@ int main()
             } else if (strComp(command, "play\0"))
             {
                 play();
+            } else if (strComp(command, "save\0"))
+            {
+                save_file();
+            } else if (strComp(command, "load\0"))
+            {
+                load_file();
             }
 
             if (token != NULL)
