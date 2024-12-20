@@ -52,7 +52,9 @@ void help()
     printf(" load (arg: filename  load existing charvid file)\n");
     printf(" save (arg: filename  save charvid video currently in RAM)\n");
 
-    printf("\n Image should be no bigger than 120x120. (expects image sequence ex: 0000.png, 0001.png)\n");
+    printf("\n to quickly playback a chv file run program as follows: charvid filename.chv\n");
+
+    printf("\n conversion:\n images should be no bigger than 150x56. \n (expects image sequence ex: 0000.png, 0001.png inside of dir named input)\n");
 }
 
 void video_mem_allocation()
@@ -150,7 +152,7 @@ void convert()
                 specs.chunks_per_second = (uint32_t)chunks_per_second;
                 chunks_needed = chunks_per_second / img_fps; // chunks needed per frame
                 if(chunks_needed < 1){chunks_needed = 1;}
-                specs.fps = img_fps;
+                specs.fps = (uint8_t)img_fps;
                 once = false;
             }
 
@@ -320,16 +322,16 @@ void play()
 {
     unsigned char pixel;
     unsigned char frame_buff[1000][1000];
-    system("clear");
     if (video_data == NULL || video_data_size == 0)
     {
         printf(" Nothing in RAM..\n");
         return;
     }
+    system("clear");
     video_data_pos = 0;
 
     int chunk_count = 0;
-    int delay_trigger = specs.chunks_per_second / specs.fps;
+    int delay_trigger = (int)specs.chunks_per_second / (int)specs.fps;
 
     while (video_data_pos < video_data_size)
     {
@@ -384,11 +386,8 @@ void play()
     }
 }
 
-void save_file()
+void save_file(char *filename)
 {
-    char filename[INPUT_MAX];
-    printf("  Filename (.chv): ");
-    scanf("%s", &filename);
     video_data_pos = 0;
     if (video_data_size == 0)
     {
@@ -412,13 +411,10 @@ void save_file()
     fclose(fp);
 }
 
-void load_file()
+void load_file(char *filename)
 {
-    char filename[INPUT_MAX];
-    printf("  Filename (.chv): ");
-    scanf("%s", &filename);
     video_data_pos = 0;
-    if (video_data_size != 0)
+    if (video_data != NULL)
     {
         free(video_data);
     }
@@ -430,8 +426,9 @@ void load_file()
     }
     fread(&specs, sizeof(File_Header), 1, fp);
     video_data_size = (int)specs.stream_len;
-    video_data = malloc(video_data_size+1000);
+    video_data = (unsigned char*)malloc(video_data_size+1000);
     unsigned char d_byte;
+
     while (video_data_pos < specs.stream_len)
     {
         fread(&d_byte, 1, 1, fp);
@@ -447,8 +444,16 @@ void load_file()
     fclose(fp);
 }
 
-int main()
+int main(int argc, char **argv)
 {
+
+    if (argc > 1)
+    {
+        load_file(argv[1]);
+        play();
+        return 0;
+    }
+
     bool run = true;
     char input[INPUT_MAX];
     char command[INPUT_MAX];
@@ -459,7 +464,7 @@ int main()
         while(1)
         {
             printf("command: ");
-            scanf("%s", &input);
+            fgets(input, INPUT_MAX, stdin);
             if (input[0] == '\r' || input[0] == '\n')
             {
                 break;
@@ -469,6 +474,10 @@ int main()
             token = strtok(input, " \n\t\r");
             strcpy(command, token);
             token = strtok(NULL, " \n\t\r");
+            if (token != NULL)
+            {
+                strcpy(arg, token);
+            }
             if (token != NULL)
             {
                 strcpy(arg, token);
@@ -488,16 +497,12 @@ int main()
                 play();
             } else if (strComp(command, "save\0"))
             {
-                save_file();
+                save_file(arg);
             } else if (strComp(command, "load\0"))
             {
-                load_file();
+                load_file(arg);
             }
 
-            if (token != NULL)
-            {
-                free(token);
-            }
             break;
         }
     }
