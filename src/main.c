@@ -1,3 +1,5 @@
+// code by Jake Aigner 2024
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
