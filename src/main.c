@@ -174,8 +174,16 @@ void convert()
                 {
                     for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
                     {
-                        pixel = img[((chunk_size/2)+(chunk_y*chunk_size))*img_w+((chunk_size/2)+(chunk_x*chunk_size))];
-                        prev_chunk_buff[chunk_y][chunk_x] = pixel;
+                        prev_chunk_buff[chunk_y][chunk_x] = 0;
+                        pixel = img[(2+(chunk_y*chunk_size))*img_w+(2+(chunk_x*chunk_size))];
+                        prev_chunk_buff[chunk_y][chunk_x] += pixel;
+                        pixel = img[(2+(chunk_y*chunk_size))*img_w+((chunk_size-2)+(chunk_x*chunk_size))];
+                        prev_chunk_buff[chunk_y][chunk_x] += pixel;
+                        pixel = img[((chunk_size-2)+(chunk_y*chunk_size))*img_w+(2+(chunk_x*chunk_size))];
+                        prev_chunk_buff[chunk_y][chunk_x] += pixel;
+                        pixel = img[((chunk_size-2)+(chunk_y*chunk_size))*img_w+((chunk_size-2)+(chunk_x*chunk_size))];
+                        prev_chunk_buff[chunk_y][chunk_x] += pixel;
+                        prev_chunk_buff[chunk_y][chunk_x] = prev_chunk_buff[chunk_y][chunk_x] / 4;
                     }
                 }
 
@@ -187,8 +195,16 @@ void convert()
                 {
                     for (int chunk_x = 0; chunk_x < (img_w / chunk_size); chunk_x++)
                     {
-                        pixel = img[((chunk_size/2)+(chunk_y*chunk_size))*img_w+((chunk_size/2)+(chunk_x*chunk_size))];
-                        curr_chunk_buff[chunk_y][chunk_x] = pixel;
+                        curr_chunk_buff[chunk_y][chunk_x] = 0;
+                        pixel = img[(2+(chunk_y*chunk_size))*img_w+(2+(chunk_x*chunk_size))];
+                        curr_chunk_buff[chunk_y][chunk_x] += pixel;
+                        pixel = img[(2+(chunk_y*chunk_size))*img_w+((chunk_size-2)+(chunk_x*chunk_size))];
+                        curr_chunk_buff[chunk_y][chunk_x] += pixel;
+                        pixel = img[((chunk_size-2)+(chunk_y*chunk_size))*img_w+(2+(chunk_x*chunk_size))];
+                        curr_chunk_buff[chunk_y][chunk_x] += pixel;
+                        pixel = img[((chunk_size-2)+(chunk_y*chunk_size))*img_w+((chunk_size-2)+(chunk_x*chunk_size))];
+                        curr_chunk_buff[chunk_y][chunk_x] += pixel;
+                        curr_chunk_buff[chunk_y][chunk_x] = prev_chunk_buff[chunk_y][chunk_x] / 4;
                     }
                 }
 
